@@ -21,7 +21,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Build
         run: zig build
@@ -45,7 +45,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2
         with:
-          version: 0.15.2
+          version: 0.16.0
 
       - name: Build Windows x86_64
         run: zig build -Dtarget=x86_64-windows -Doptimize=ReleaseSafe
