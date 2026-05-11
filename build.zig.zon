@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .flags = .{
-            .url = "git+https://github.com/atisans/flags.zig.git#ba3ae7d2434cc6f381356e8028b51b60ab5942d1",
-            .hash = "flags-0.1.0-GjWK4iW1AAC8grTvxWnjU2VjsWp6uG5VJN2L3nqdIO_K",
+            .url = "git+https://github.com/spikenardco/flags.zig.git#8f8829ba3602d7402f2f6ddf7ff2e52881ba2168",
+            .hash = "flags-0.1.0-GjWK4vO4AADwn9KOxUrz5IYE9Ylz4m1-uQ6Y7xsfHMRY",
         },
     },
     .paths = .{
