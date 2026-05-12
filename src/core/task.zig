@@ -123,7 +123,7 @@ pub fn execute_commands(io: std.Io, environ: std.process.Environ, T: TaskArgs) v
 
     if (T.subcommand) |subcommand| {
         switch (subcommand) {
-            .add => |add| add_task(allocator, io, add.name, dir) catch {
+            .add => |add| add_task(allocator, io, dir, add.name, add.desc) catch {
                 std.debug.print("Failed to add task\n", .{});
                 return;
             },
@@ -142,7 +142,13 @@ pub fn execute_commands(io: std.Io, environ: std.process.Environ, T: TaskArgs) v
 }
 
 /// Creates a new task with the given title and persists it to storage.
-fn add_task(allocator: std.mem.Allocator, io: std.Io, title: []const u8, dir: std.Io.Dir) !void {
+fn add_task(
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    dir: std.Io.Dir,
+    title: []const u8,
+    description: ?[]const u8,
+) !void {
     if (title.len == 0) return error.EmptyTitle;
 
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -161,10 +167,12 @@ fn add_task(allocator: std.mem.Allocator, io: std.Io, title: []const u8, dir: st
     try tasks.append(allocator, .{
         .status = .pending,
         .id = id[0..],
-        .title = title[0..],
+        .title = title,
+        .description = description orelse "",
         .created_at = unix_timestamp(io),
     });
     std.debug.print("Adding task: {s}\n", .{title});
+    std.debug.print("task description: {s}\n", .{description orelse ""});
 
     try storage.save_tasks(arena.allocator(), io, dir, tasks.items);
 }
@@ -432,7 +440,7 @@ test "add and list tasks" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "Test Task", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "Test Task", null);
 
     var arena = std.heap.ArenaAllocator.init(allocator);
     defer arena.deinit();
@@ -452,7 +460,7 @@ test "delete task" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "To Delete", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "Test Task", null);
 
     const task_id = blk: {
         var arena = std.heap.ArenaAllocator.init(allocator);
@@ -503,7 +511,7 @@ test "mark_complete sets status and timestamps" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "Complete Me", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "Complete Me", null);
 
     const tasks = try storage.load_tasks(arena.allocator(), io, tmp_dir.dir);
     try mark_complete(allocator, io, tasks[0].id, tmp_dir.dir);
@@ -521,7 +529,7 @@ test "mark_complete nonexistent task returns error" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "Some Task", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "Some Task", null);
 
     try std.testing.expectError(error.InvalidItem, mark_complete(allocator, io, "nonexistent-id", tmp_dir.dir));
 }
@@ -533,7 +541,7 @@ test "add empty task name returns error" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try std.testing.expectError(error.EmptyTitle, add_task(allocator, io, "", tmp_dir.dir));
+    try std.testing.expectError(error.EmptyTitle, add_task(allocator, io, tmp_dir.dir, "", null));
 }
 
 test "multiple tasks have unique ids" {
@@ -545,9 +553,9 @@ test "multiple tasks have unique ids" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "First", tmp_dir.dir);
-    try add_task(allocator, io, "Second", tmp_dir.dir);
-    try add_task(allocator, io, "Third", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "First", null);
+    try add_task(allocator, io, tmp_dir.dir, "Second", null);
+    try add_task(allocator, io, tmp_dir.dir, "Third", null);
 
     const tasks = try storage.load_tasks(arena.allocator(), io, tmp_dir.dir);
     try std.testing.expectEqual(tasks.len, 3);
@@ -565,8 +573,8 @@ test "list tasks with mixed statuses" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
-    try add_task(allocator, io, "Pending Task", tmp_dir.dir);
-    try add_task(allocator, io, "Done Task", tmp_dir.dir);
+    try add_task(allocator, io, tmp_dir.dir, "Pending Task", null);
+    try add_task(allocator, io, tmp_dir.dir, "Done Task", null);
 
     const tasks = try storage.load_tasks(arena.allocator(), io, tmp_dir.dir);
     try mark_complete(allocator, io, tasks[1].id, tmp_dir.dir);
